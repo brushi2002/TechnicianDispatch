@@ -1,7 +1,2 @@
-# Claude Code
-**/CLAUDE.md
-.claude/
-.mcp.json
-
 # API secrets
 api/.env
