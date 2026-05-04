@@ -95,11 +95,9 @@ Technician ──< TechnicianAvailability
 | Table | Primary Key | Notable Columns |
 |-------|-------------|-----------------|
 | `Technician` | `id` UUID | `Name`, `Address` |
-| `Job` | `id` UUID | `Name`, `DurationInHours`, `StartTime` (TIMESTAMPTZ[]) |
+| `Job` | `id` UUID | `Name`, `DurationInHours`, `StartTime` (TIMESTAMPTZ) |
 | `JobAssignment` | `(JobId, TechnicianId)` composite | `JobStartTime`, `JobEndDate` |
 | `TechnicianAvailability` | `(TechnicianID, DayofWeek)` composite | `StartTime`, `EndTime` (TIMETZ) |
-
-`Job.StartTime` is a PostgreSQL array (`TIMESTAMPTZ[]`) representing one or more candidate start times. asyncpg maps this to a Python `list[datetime]` automatically.
 
 `TechnicianAvailability.DayofWeek` is an integer: `0` = Sunday, `6` = Saturday.
 
@@ -138,7 +136,6 @@ All routes are prefixed with `/api/v1`.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/job-assignments` | List all assignments (filter via `?job_id=` or `?technician_id=`) |
-| `POST` | `/job-assignments` | Create an assignment directly |
 | `GET` | `/job-assignments/{job_id}/{technician_id}` | Get an assignment by composite key |
 | `PUT` | `/job-assignments/{job_id}/{technician_id}` | Update assignment timestamps |
 | `DELETE` | `/job-assignments/{job_id}/{technician_id}` | Remove an assignment |
@@ -157,7 +154,13 @@ All routes are prefixed with `/api/v1`.
 
 ## Assigning a Technician to a Job
 
-`POST /api/v1/jobs/{job_id}/assign` is the primary endpoint for dispatch scheduling. It differs from the raw `POST /job-assignments` in that it explicitly validates the existence of both the job and the technician before inserting, returning a clear `404` for either missing resource rather than a generic constraint error.
+`POST /api/v1/jobs/{job_id}/assign` is the only endpoint for creating assignments. It runs a series of validations before inserting:
+
+1. Job exists
+2. Technician exists
+3. Technician has an availability record for the job's day of week
+4. Technician's availability hours fully cover the job's time window
+5. Technician has no overlapping assignment with another job
 
 **Request body:**
 ```json
@@ -171,7 +174,7 @@ All routes are prefixed with `/api/v1`.
 **Responses:**
 - `201 Created` — assignment created successfully
 - `404 Not Found` — job or technician does not exist
-- `409 Conflict` — technician is already assigned to this job
+- `409 Conflict` — technician is unavailable on that day, outside their availability hours, already booked during that window, or already assigned to this job
 
 ---
 

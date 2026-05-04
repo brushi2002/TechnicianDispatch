@@ -22,14 +22,14 @@ Represents a field technician.
 
 ### Job
 
-Represents a job to be dispatched. A job has a duration and a set of candidate start times from which one will be selected at assignment time.
+Represents a job to be dispatched. A job has a scheduled start time and a duration.
 
-| Column          | Type          | Nullable | Notes                                      |
-|-----------------|---------------|----------|--------------------------------------------|
-| id              | UUID          | NO       | Primary key                                |
-| Name            | VARCHAR(50)   | YES      |                                            |
-| DurationInHours | BIGINT        | NO       | Expected length of the job in hours        |
-| StartTime       | TIMESTAMPTZ[] | NO       | Array of candidate start timestamps        |
+| Column          | Type        | Nullable | Notes                               |
+|-----------------|-------------|----------|-------------------------------------|
+| id              | UUID        | NO       | Primary key                         |
+| Name            | VARCHAR(50) | YES      |                                     |
+| DurationInHours | BIGINT      | NO       | Expected length of the job in hours |
+| StartTime       | TIMESTAMPTZ | NO       | Scheduled start timestamp           |
 
 ---
 
