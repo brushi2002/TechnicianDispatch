@@ -1,5 +1,7 @@
 # CRUD endpoints for the Job entity, plus a dedicated endpoint for assigning
 # a technician to a job and a sub-resource route to list a job's assignments.
+# Assignment validates technician availability window and checks for scheduling
+# conflicts with existing job assignments before inserting.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID, uuid4
@@ -172,8 +174,8 @@ async def assign_technician_to_job(
     connection: asyncpg.Connection = Depends(get_connection),
 ) -> JobAssignmentResponse:
     """
-    Assigns a technician to a job. Validates that both the job and the technician
-    exist before creating the assignment record.
+    Assigns a technician to a job. Validates existence, day availability, time window
+    coverage, and scheduling conflicts before inserting the assignment record.
 
     Args:
         job_id: UUID of the job to assign the technician to.
@@ -184,7 +186,11 @@ async def assign_technician_to_job(
         The newly created JobAssignmentResponse.
 
     Raises:
-        HTTPException 404: If the job or technician does not exist.
+        HTTPException 404: If the job does not exist.
+        HTTPException 404: If the technician does not exist.
+        HTTPException 409: If the technician has no availability on the job's day of week.
+        HTTPException 409: If the job's time window falls outside the technician's availability hours.
+        HTTPException 409: If the technician is already assigned to another job during this time window.
         HTTPException 409: If the technician is already assigned to this job.
     """
     # Verify the job exists
@@ -202,6 +208,23 @@ async def assign_technician_to_job(
     )
     if not technician_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Technician not found.")
+
+    # Verify the technician has an availability record for the job's day of week
+    available_on_day = await connection.fetchval(
+        """
+        SELECT 1 FROM public."TechnicianAvailability" TA
+        INNER JOIN public."Job" J ON J.id = $1
+        WHERE TA."TechnicianID" = $2
+            AND TA."DayofWeek" = EXTRACT(ISODOW FROM J."StartTime")
+        """,
+        job_id,
+        payload.technician_id,
+    )
+    if not available_on_day:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Technician is not available on the day this job is scheduled.",
+        )
 
     # Verify the technician's availability window covers the job's time window
     is_available = await connection.fetchval(
@@ -224,6 +247,30 @@ async def assign_technician_to_job(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Technician is not available for this job's time window.",
+        )
+
+    # Check for overlap with the technician's existing job assignments
+    has_conflict = await connection.fetchval(
+        """
+        SELECT 1
+        FROM public."JobAssignment" JA
+        INNER JOIN public."Job" J ON J.id = JA."JobId"
+        CROSS JOIN (
+            SELECT "StartTime", "DurationInHours" FROM public."Job" WHERE id = $1
+        ) AS new_job
+        WHERE JA."TechnicianId" = $2
+            AND JA."JobId" != $1
+            AND JA."JobStartTime" IS NOT NULL
+            AND tstzrange(JA."JobStartTime", JA."JobStartTime" + J."DurationInHours" * interval '1 hour')
+                && tstzrange(new_job."StartTime", new_job."StartTime" + new_job."DurationInHours" * interval '1 hour')
+        """,
+        job_id,
+        payload.technician_id,
+    )
+    if has_conflict:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Technician is already assigned to another job during this time window.",
         )
 
     try:

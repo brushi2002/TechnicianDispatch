@@ -1,5 +1,7 @@
 # CRUD endpoints for the JobAssignment junction table.
 # JobAssignment has a composite PK of (JobId, TechnicianId).
+# Use POST /api/v1/jobs/{job_id}/assign to create assignments — it enforces
+# availability and conflict validation before inserting.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID
@@ -8,7 +10,6 @@ import asyncpg
 
 from database import get_connection
 from schemas.job_assignment import (
-    JobAssignmentCreate,
     JobAssignmentUpdate,
     JobAssignmentResponse,
 )
@@ -86,98 +87,6 @@ async def get_job_assignment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job assignment not found.")
     return JobAssignmentResponse(**dict(record))
 
-
-@router.post("/", response_model=JobAssignmentResponse, status_code=status.HTTP_201_CREATED)
-async def create_job_assignment(
-    payload: JobAssignmentCreate,
-    connection: asyncpg.Connection = Depends(get_connection),
-) -> JobAssignmentResponse:
-    """
-    Creates a new JobAssignment linking a technician to a job.
-
-    Args:
-        payload: JobAssignmentCreate body with JobId, TechnicianId, and optional timestamps.
-        connection: Injected asyncpg database connection.
-
-    Returns:
-        The newly created JobAssignmentResponse.
-
-    Raises:
-        HTTPException 404: If the referenced job or technician does not exist.
-        HTTPException 409: If the assignment already exists (duplicate composite key).
-    """
-    try:
-
-
-        # Prevent an Assignment if the Job is Already Assigned
-        record = await connection.fetchrow(
-            """
-            SELECT * 
-              FROM public."JobAssignment" 
-             WHERE "JobId" = $1
-            """,
-            payload.job_id 
-        )
-
-        if(record):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="This Job is Already Assigned"
-            )
-
-        # Prevent an Assignment if the Technician is Unavailable on that Day
-        record = await connection.fetchrow(
-            """    
-            SELECT "id" FROM public."Job"
-             WHERE id = $1 
-               AND EXTRACT(ISODOW FROM "StartTime") IN (SELECT "DayofWeek"
-  											              FROM public."TechnicianAvailability" AS TA
-											             WHERE TA."TechnicianID" = $2 )
- 
-            """,
-            payload.job_id,
-            payload.technician_id
-            
-        )
-
-        if(not record):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="The Technician is unavailable on this day"
-            )
-
-
-
-
-
-        # Prevent an Assignment if the Technician is Already Assigned a job during those hours.
-        #record = await connection.fetchrow(
-        #    """"""
-        #)
-
-        record = await connection.fetchrow(
-            """
-            INSERT INTO public."JobAssignment" ("JobId", "TechnicianId", "JobStartTime", "JobEndDate")
-            VALUES ($1, $2, $3, $4)
-            RETURNING *
-            """,
-            payload.job_id,
-            payload.technician_id,
-            payload.job_start_time,
-            payload.job_end_date,
-        )
-
-    except asyncpg.ForeignKeyViolationError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Referenced job or technician does not exist.",
-        )
-    except asyncpg.UniqueViolationError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This technician is already assigned to the specified job.",
-        )
-    return JobAssignmentResponse(**dict(record))
 
 
 @router.put("/{job_id}/{technician_id}", response_model=JobAssignmentResponse)
