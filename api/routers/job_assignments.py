@@ -107,6 +107,54 @@ async def create_job_assignment(
         HTTPException 409: If the assignment already exists (duplicate composite key).
     """
     try:
+
+
+        # Prevent an Assignment if the Job is Already Assigned
+        record = await connection.fetchrow(
+            """
+            SELECT * 
+              FROM public."JobAssignment" 
+             WHERE "JobId" = $1
+            """,
+            payload.job_id 
+        )
+
+        if(record):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This Job is Already Assigned"
+            )
+
+        # Prevent an Assignment if the Technician is Unavailable on that Day
+        record = await connection.fetchrow(
+            """    
+            SELECT "id" FROM public."Job"
+             WHERE id = $1 
+               AND EXTRACT(ISODOW FROM "StartTime") IN (SELECT "DayofWeek"
+  											              FROM public."TechnicianAvailability" AS TA
+											             WHERE TA."TechnicianID" = $2 )
+ 
+            """,
+            payload.job_id,
+            payload.technician_id
+            
+        )
+
+        if(not record):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="The Technician is unavailable on this day"
+            )
+
+
+
+
+
+        # Prevent an Assignment if the Technician is Already Assigned a job during those hours.
+        #record = await connection.fetchrow(
+        #    """"""
+        #)
+
         record = await connection.fetchrow(
             """
             INSERT INTO public."JobAssignment" ("JobId", "TechnicianId", "JobStartTime", "JobEndDate")
@@ -118,6 +166,7 @@ async def create_job_assignment(
             payload.job_start_time,
             payload.job_end_date,
         )
+
     except asyncpg.ForeignKeyViolationError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

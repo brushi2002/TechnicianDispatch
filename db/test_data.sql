@@ -82,36 +82,18 @@ INSERT INTO public."TechnicianAvailability" ("TechnicianID", "DayofWeek", "Start
 -- ============================================================
 
 INSERT INTO public."Job" (id, "Name", "DurationInHours", "StartTime") VALUES
-    (
-        'b2000000-0000-0000-0000-000000000001',
-        'HVAC Inspection - Downtown Office',
-        4,
-        ARRAY['2026-05-05 08:00:00-06'::timestamptz, '2026-05-06 08:00:00-06'::timestamptz, '2026-05-07 08:00:00-06'::timestamptz]
-    ),
-    (
-        'b2000000-0000-0000-0000-000000000002',
-        'Electrical Panel Upgrade - Westside Retail',
-        8,
-        ARRAY['2026-05-12 07:00:00-06'::timestamptz, '2026-05-13 07:00:00-06'::timestamptz]
-    ),
-    (
-        'b2000000-0000-0000-0000-000000000003',
-        'Plumbing Repair - North Campus',
-        2,
-        ARRAY['2026-05-08 09:00:00-06'::timestamptz, '2026-05-09 09:00:00-06'::timestamptz, '2026-05-14 09:00:00-06'::timestamptz]
-    ),
-    (
-        'b2000000-0000-0000-0000-000000000004',
-        'Fire Suppression Test - Warehouse A',
-        6,
-        ARRAY['2026-05-15 10:00:00-06'::timestamptz, '2026-05-16 10:00:00-06'::timestamptz]
-    ),
-    (
-        'b2000000-0000-0000-0000-000000000005',
-        'Generator Maintenance - South Hospital',
-        3,
-        ARRAY['2026-05-19 06:00:00-06'::timestamptz, '2026-05-20 06:00:00-06'::timestamptz, '2026-05-21 06:00:00-06'::timestamptz]
-    );
+    ('b2000000-0000-0000-0000-000000000001', 'HVAC Inspection - Downtown Office',        4, '2026-05-05 08:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000002', 'Electrical Panel Upgrade - Westside Retail', 8, '2026-05-12 07:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000003', 'Plumbing Repair - North Campus',           2, '2026-05-08 09:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000004', 'Fire Suppression Test - Warehouse A',      6, '2026-05-15 10:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000005', 'Generator Maintenance - South Hospital',   3, '2026-05-19 06:00:00-06'),
+    -- Unassigned jobs
+    ('b2000000-0000-0000-0000-000000000006', 'Roof Drainage Inspection - East Campus',   2, '2026-05-20 09:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000007', 'Boiler Servicing - Midtown Hotel',         5, '2026-05-21 07:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000008', 'Security Camera Installation - Parking Garage', 4, '2026-05-22 08:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000009', 'Emergency Exit Lighting Replacement - Library', 3, '2026-05-27 10:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000010', 'Elevator Safety Inspection - Tower B',     6, '2026-05-28 08:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000011', 'Water Heater Replacement - Eastside Clinic', 4, '2026-05-29 09:00:00-06');
 
 -- ============================================================
 -- Job Assignments

@@ -66,11 +66,9 @@ async def create_job(
 ) -> JobResponse:
     """
     Creates a new Job. The id is generated server-side.
-    StartTime is stored as a PostgreSQL TIMESTAMPTZ array; asyncpg binds
-    a Python list[datetime] directly to that array column.
 
     Args:
-        payload: JobCreate body with Name, DurationInHours, and StartTime list.
+        payload: JobCreate body with Name, DurationInHours, and StartTime.
         connection: Injected asyncpg database connection.
 
     Returns:
@@ -82,7 +80,7 @@ async def create_job(
         new_id,
         payload.name,
         payload.duration_in_hours,
-        payload.start_time,  # asyncpg maps list[datetime] → TIMESTAMPTZ[]
+        payload.start_time,
     )
     return JobResponse(**dict(record))
 
@@ -204,6 +202,29 @@ async def assign_technician_to_job(
     )
     if not technician_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Technician not found.")
+
+    # Verify the technician's availability window covers the job's time window
+    is_available = await connection.fetchval(
+        """
+        SELECT 1 FROM public."Job" AS J
+        INNER JOIN public."TechnicianAvailability" TA
+            ON TA."TechnicianID" = $2
+            AND TA."DayofWeek" = EXTRACT(ISODOW FROM J."StartTime")
+        WHERE J.id = $1
+            AND tstzrange(J."StartTime", J."StartTime" + J."DurationInHours" * interval '1 hour')
+                <@ tstzrange(
+                    J."StartTime"::date + TA."StartTime",
+                    J."StartTime"::date + TA."EndTime"
+                )
+        """,
+        job_id,
+        payload.technician_id,
+    )
+    if not is_available:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Technician is not available for this job's time window.",
+        )
 
     try:
         record = await connection.fetchrow(
