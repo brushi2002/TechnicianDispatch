@@ -179,7 +179,7 @@ async def assign_technician_to_job(
 
     Args:
         job_id: UUID of the job to assign the technician to.
-        payload: AssignTechnicianPayload with technician_id and optional timestamps.
+        payload: AssignTechnicianPayload with technician_id.
         connection: Injected asyncpg database connection.
 
     Returns:
@@ -277,13 +277,13 @@ async def assign_technician_to_job(
         record = await connection.fetchrow(
             """
             INSERT INTO public."JobAssignment" ("JobId", "TechnicianId", "JobStartTime", "JobEndDate")
-            VALUES ($1, $2, $3, $4)
+            SELECT $1, $2, "StartTime", "StartTime" + "DurationInHours" * interval '1 hour'
+            FROM public."Job"
+            WHERE id = $1
             RETURNING *
             """,
             job_id,
             payload.technician_id,
-            payload.job_start_time,
-            payload.job_end_date,
         )
     except asyncpg.UniqueViolationError:
         raise HTTPException(

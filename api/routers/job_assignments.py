@@ -9,10 +9,7 @@ from typing import List, Optional
 import asyncpg
 
 from database import get_connection
-from schemas.job_assignment import (
-    JobAssignmentUpdate,
-    JobAssignmentResponse,
-)
+from schemas.job_assignment import JobAssignmentResponse
 
 router = APIRouter()
 
@@ -87,46 +84,6 @@ async def get_job_assignment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job assignment not found.")
     return JobAssignmentResponse(**dict(record))
 
-
-
-@router.put("/{job_id}/{technician_id}", response_model=JobAssignmentResponse)
-async def update_job_assignment(
-    job_id: UUID,
-    technician_id: UUID,
-    payload: JobAssignmentUpdate,
-    connection: asyncpg.Connection = Depends(get_connection),
-) -> JobAssignmentResponse:
-    """
-    Updates the timestamps on an existing JobAssignment.
-    The composite key (JobId, TechnicianId) is immutable and cannot be changed.
-
-    Args:
-        job_id: UUID of the job in the assignment.
-        technician_id: UUID of the technician in the assignment.
-        payload: JobAssignmentUpdate body with optional JobStartTime and JobEndDate.
-        connection: Injected asyncpg database connection.
-
-    Returns:
-        The updated JobAssignmentResponse.
-
-    Raises:
-        HTTPException 404: If no matching assignment exists.
-    """
-    record = await connection.fetchrow(
-        """
-        UPDATE public."JobAssignment"
-        SET "JobStartTime" = $3, "JobEndDate" = $4
-        WHERE "JobId" = $1 AND "TechnicianId" = $2
-        RETURNING *
-        """,
-        job_id,
-        technician_id,
-        payload.job_start_time,
-        payload.job_end_date,
-    )
-    if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job assignment not found.")
-    return JobAssignmentResponse(**dict(record))
 
 
 @router.delete("/{job_id}/{technician_id}", status_code=status.HTTP_204_NO_CONTENT)

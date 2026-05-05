@@ -137,7 +137,6 @@ All routes are prefixed with `/api/v1`.
 |--------|------|-------------|
 | `GET` | `/job-assignments` | List all assignments (filter via `?job_id=` or `?technician_id=`) |
 | `GET` | `/job-assignments/{job_id}/{technician_id}` | Get an assignment by composite key |
-| `PUT` | `/job-assignments/{job_id}/{technician_id}` | Update assignment timestamps |
 | `DELETE` | `/job-assignments/{job_id}/{technician_id}` | Remove an assignment |
 
 ### Technician Availability
@@ -165,11 +164,11 @@ All routes are prefixed with `/api/v1`.
 **Request body:**
 ```json
 {
-  "technician_id": "uuid",
-  "job_start_time": "2026-05-01T08:00:00-05:00",  // optional
-  "job_end_date":   "2026-05-01T12:00:00-05:00"   // optional
+  "technician_id": "uuid"
 }
 ```
+
+`JobStartTime` and `JobEndDate` are derived from `Job.StartTime` and `Job.DurationInHours` on insert.
 
 **Responses:**
 - `201 Created` — assignment created successfully
