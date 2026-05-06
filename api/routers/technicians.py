@@ -211,10 +211,10 @@ async def get_technician_assignments(
     """
     records = await connection.fetch(
         """
-        SELECT "JobId", "TechnicianId", "JobStartTime", "JobEndDate"
+        SELECT "JobId", "TechnicianId", "JobStartDateTime", "JobEndDateTime"
         FROM public."JobAssignment"
         WHERE "TechnicianId" = $1
-        ORDER BY "JobStartTime"
+        ORDER BY "JobStartDateTime"
         """,
         technician_id,
     )

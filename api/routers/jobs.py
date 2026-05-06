@@ -1,7 +1,7 @@
 # CRUD endpoints for the Job entity, plus a dedicated endpoint for assigning
-# a technician to a job and a sub-resource route to list a job's assignments.
-# Assignment validates technician availability window and checks for scheduling
-# conflicts with existing job assignments before inserting.
+# a technician to a job and sub-resource routes to list a job's assignments
+# and available technicians. Assignment validates technician availability window
+# and checks for scheduling conflicts before inserting.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from uuid import UUID, uuid4
@@ -11,6 +11,7 @@ import asyncpg
 from database import get_connection
 from schemas.job import JobCreate, JobUpdate, JobResponse
 from schemas.job_assignment import AssignTechnicianPayload, JobAssignmentResponse
+from schemas.technician import TechnicianResponse
 
 router = APIRouter()
 
@@ -187,6 +188,7 @@ async def assign_technician_to_job(
 
     Raises:
         HTTPException 404: If the job does not exist.
+        HTTPException 409: If the job already has a technician assigned.
         HTTPException 404: If the technician does not exist.
         HTTPException 409: If the technician has no availability on the job's day of week.
         HTTPException 409: If the job's time window falls outside the technician's availability hours.
@@ -200,6 +202,17 @@ async def assign_technician_to_job(
     )
     if not job_exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
+
+    # Enforce one technician per job
+    already_assigned = await connection.fetchval(
+        'SELECT 1 FROM public."JobAssignment" WHERE "JobId" = $1',
+        job_id,
+    )
+    if already_assigned:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This job already has a technician assigned.",
+        )
 
     # Verify the technician exists
     technician_exists = await connection.fetchval(
@@ -254,14 +267,13 @@ async def assign_technician_to_job(
         """
         SELECT 1
         FROM public."JobAssignment" JA
-        INNER JOIN public."Job" J ON J.id = JA."JobId"
         CROSS JOIN (
             SELECT "StartTime", "DurationInHours" FROM public."Job" WHERE id = $1
         ) AS new_job
         WHERE JA."TechnicianId" = $2
             AND JA."JobId" != $1
-            AND JA."JobStartTime" IS NOT NULL
-            AND tstzrange(JA."JobStartTime", JA."JobStartTime" + J."DurationInHours" * interval '1 hour')
+            AND JA."JobStartDateTime" IS NOT NULL
+            AND tstzrange(JA."JobStartDateTime", JA."JobEndDateTime")
                 && tstzrange(new_job."StartTime", new_job."StartTime" + new_job."DurationInHours" * interval '1 hour')
         """,
         job_id,
@@ -276,7 +288,7 @@ async def assign_technician_to_job(
     try:
         record = await connection.fetchrow(
             """
-            INSERT INTO public."JobAssignment" ("JobId", "TechnicianId", "JobStartTime", "JobEndDate")
+            INSERT INTO public."JobAssignment" ("JobId", "TechnicianId", "JobStartDateTime", "JobEndDateTime")
             SELECT $1, $2, "StartTime", "StartTime" + "DurationInHours" * interval '1 hour'
             FROM public."Job"
             WHERE id = $1
@@ -310,11 +322,91 @@ async def get_job_assignments(
     """
     records = await connection.fetch(
         """
-        SELECT "JobId", "TechnicianId", "JobStartTime", "JobEndDate"
+        SELECT "JobId", "TechnicianId", "JobStartDateTime", "JobEndDateTime"
         FROM public."JobAssignment"
         WHERE "JobId" = $1
-        ORDER BY "JobStartTime"
+        ORDER BY "JobStartDateTime"
         """,
         job_id,
     )
     return [JobAssignmentResponse(**dict(record)) for record in records]
+
+
+@router.get("/{job_id}/available-technicians", response_model=List[TechnicianResponse])
+async def get_available_technicians(
+    job_id: UUID,
+    connection: asyncpg.Connection = Depends(get_connection),
+) -> List[TechnicianResponse]:
+    """
+    Returns technicians who can be assigned to this job. A technician is included
+    only if all three conditions hold:
+      1. They have an availability slot on the job's day whose time window fully
+         covers the job's start-to-end range.
+      2. They are not already assigned to this job.
+      3. They have no existing assignment that overlaps this job's time window.
+
+    Args:
+        job_id: UUID of the job to check availability for.
+        connection: Injected asyncpg database connection.
+
+    Returns:
+        List of TechnicianResponse objects ordered by Name.
+
+    Raises:
+        HTTPException 404: If the job does not exist.
+    """
+    job_exists = await connection.fetchval(
+        'SELECT 1 FROM public."Job" WHERE id = $1',
+        job_id,
+    )
+    if not job_exists:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found.")
+
+    records = await connection.fetch(
+        """
+        SELECT T.id, T."Name", T."Address"
+        FROM public."Technician" T
+        WHERE
+            -- Job has no technician yet
+            NOT EXISTS (
+                SELECT 1 FROM public."JobAssignment" WHERE "JobId" = $1
+            )
+            -- Availability covers the job's day and time window
+            AND EXISTS (
+                SELECT 1
+                FROM public."TechnicianAvailability" TA
+                INNER JOIN public."Job" J ON J.id = $1
+                WHERE TA."TechnicianID" = T.id
+                    AND TA."DayofWeek" = EXTRACT(ISODOW FROM J."StartTime")
+                    AND tstzrange(J."StartTime", J."StartTime" + J."DurationInHours" * interval '1 hour')
+                        <@ tstzrange(
+                            J."StartTime"::date + TA."StartTime",
+                            J."StartTime"::date + TA."EndTime"
+                        )
+            )
+            -- Not already assigned to this job
+            AND NOT EXISTS (
+                SELECT 1 FROM public."JobAssignment" JA
+                WHERE JA."JobId" = $1 AND JA."TechnicianId" = T.id
+            )
+            -- No scheduling conflict with other jobs
+            AND NOT EXISTS (
+                SELECT 1
+                FROM public."JobAssignment" JA
+                CROSS JOIN (
+                    SELECT "StartTime", "DurationInHours" FROM public."Job" WHERE id = $1
+                ) AS new_job
+                WHERE JA."TechnicianId" = T.id
+                    AND JA."JobId" != $1
+                    AND JA."JobStartDateTime" IS NOT NULL
+                    AND tstzrange(JA."JobStartDateTime", JA."JobEndDateTime")
+                        && tstzrange(
+                            new_job."StartTime",
+                            new_job."StartTime" + new_job."DurationInHours" * interval '1 hour'
+                        )
+            )
+        ORDER BY T."Name"
+        """,
+        job_id,
+    )
+    return [TechnicianResponse(**dict(record)) for record in records]

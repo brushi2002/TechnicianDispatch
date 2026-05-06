@@ -1,8 +1,10 @@
 -- Test data for TechnicianDispatch database.
--- Loads 10 technicians with availability, 5 jobs, and assignments linking technicians to jobs.
--- Run after all CREATE scripts have been executed.
+-- Loads 10 technicians with availability, 14 jobs, and 5 assignments (one technician per job).
+-- Safe to re-run: truncates all tables before inserting.
 
 BEGIN;
+
+TRUNCATE public."JobAssignment", public."TechnicianAvailability", public."Job", public."Technician";
 
 -- ============================================================
 -- Technicians
@@ -86,43 +88,41 @@ INSERT INTO public."Job" (id, "Name", "DurationInHours", "StartTime") VALUES
     ('b2000000-0000-0000-0000-000000000002', 'Electrical Panel Upgrade - Westside Retail', 8, '2026-05-12 07:00:00-06'),
     ('b2000000-0000-0000-0000-000000000003', 'Plumbing Repair - North Campus',           2, '2026-05-08 09:00:00-06'),
     ('b2000000-0000-0000-0000-000000000004', 'Fire Suppression Test - Warehouse A',      6, '2026-05-15 10:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000005', 'Generator Maintenance - South Hospital',   3, '2026-05-19 06:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000005', 'Generator Maintenance - South Hospital',   3, '2026-05-19 07:00:00-06'),
     -- Unassigned jobs
     ('b2000000-0000-0000-0000-000000000006', 'Roof Drainage Inspection - East Campus',   2, '2026-05-20 09:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000007', 'Boiler Servicing - Midtown Hotel',         5, '2026-05-21 07:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000007', 'Boiler Servicing - Midtown Hotel',         5, '2026-05-21 09:00:00-06'),
     ('b2000000-0000-0000-0000-000000000008', 'Security Camera Installation - Parking Garage', 4, '2026-05-22 08:00:00-06'),
     ('b2000000-0000-0000-0000-000000000009', 'Emergency Exit Lighting Replacement - Library', 3, '2026-05-27 10:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000010', 'Elevator Safety Inspection - Tower B',     6, '2026-05-28 08:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000011', 'Water Heater Replacement - Eastside Clinic', 4, '2026-05-29 09:00:00-06');
+    ('b2000000-0000-0000-0000-000000000010', 'Elevator Safety Inspection - Tower B',     6, '2026-05-28 09:00:00-06'),
+    ('b2000000-0000-0000-0000-000000000011', 'Water Heater Replacement - Eastside Clinic', 4, '2026-05-29 09:00:00-06'),
+    -- Conflict-test jobs: same date as an assigned job; trying to assign the busy technician should be rejected
+    -- Tue 2026-05-05: overlaps Brian Tate's HVAC job (08:00–12:00) — assigning Brian should fail
+    ('b2000000-0000-0000-0000-000000000012', 'Lighting Retrofit - Downtown Office',      2, '2026-05-05 09:00:00-06'),
+    -- Fri 2026-05-08: overlaps Grace Kim's Plumbing job (09:00–11:00) — assigning Grace should fail
+    ('b2000000-0000-0000-0000-000000000013', 'Drain Inspection - North Campus',          2, '2026-05-08 10:00:00-06'),
+    -- Tue 2026-05-19: overlaps David Nguyen's Generator job (07:00–10:00) — assigning David should fail
+    ('b2000000-0000-0000-0000-000000000014', 'Cooling Tower Service - South Hospital',   3, '2026-05-19 08:00:00-06');
 
 -- ============================================================
 -- Job Assignments
--- Each job assigned to 2–3 technicians
+-- One technician per job. Technician chosen based on verified availability.
 -- ============================================================
 
-INSERT INTO public."JobAssignment" ("JobId", "TechnicianId", "JobStartTime", "JobEndDate") VALUES
-    -- Job 1: HVAC Inspection — Alice, Brian, Frank
-    ('b2000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', '2026-05-05 08:00:00-06', '2026-05-05 12:00:00-06'),
+INSERT INTO public."JobAssignment" ("JobId", "TechnicianId", "JobStartDateTime", "JobEndDateTime") VALUES
+    -- Job 1: HVAC Inspection (Tue 08:00–12:00) — Brian Tate (Tue 07:00–15:00)
     ('b2000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000002', '2026-05-05 08:00:00-06', '2026-05-05 12:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000006', '2026-05-05 08:00:00-06', '2026-05-05 12:00:00-06'),
 
-    -- Job 2: Electrical Panel Upgrade — Brian, David, Henry
-    ('b2000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', '2026-05-12 07:00:00-06', '2026-05-12 15:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000004', '2026-05-12 07:00:00-06', '2026-05-12 15:00:00-06'),
+    -- Job 2: Electrical Panel Upgrade (Tue 07:00–15:00) — Henry Larson (Tue 07:00–15:00)
     ('b2000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000008', '2026-05-12 07:00:00-06', '2026-05-12 15:00:00-06'),
 
-    -- Job 3: Plumbing Repair — Carmen, Grace
-    ('b2000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', '2026-05-08 09:00:00-06', '2026-05-08 11:00:00-06'),
+    -- Job 3: Plumbing Repair (Fri 09:00–11:00) — Grace Kim (Fri 09:00–13:00)
     ('b2000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000007', '2026-05-08 09:00:00-06', '2026-05-08 11:00:00-06'),
 
-    -- Job 4: Fire Suppression Test — Elena, James, Isabel
+    -- Job 4: Fire Suppression Test (Fri 10:00–16:00) — Elena Hartwell (Fri 10:00–18:00)
     ('b2000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000005', '2026-05-15 10:00:00-06', '2026-05-15 16:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000010', '2026-05-15 10:00:00-06', '2026-05-15 16:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000009', '2026-05-15 10:00:00-06', '2026-05-15 16:00:00-06'),
 
-    -- Job 5: Generator Maintenance — David, Brian, Alice
-    ('b2000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000004', '2026-05-19 06:00:00-06', '2026-05-19 09:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000002', '2026-05-19 06:00:00-06', '2026-05-19 09:00:00-06'),
-    ('b2000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000001', '2026-05-19 06:00:00-06', '2026-05-19 09:00:00-06');
+    -- Job 5: Generator Maintenance (Tue 07:00–10:00) — David Nguyen (Tue 06:00–14:00)
+    ('b2000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000004', '2026-05-19 07:00:00-06', '2026-05-19 10:00:00-06');
 
 COMMIT;

@@ -27,7 +27,7 @@ async def list_technician_availability(
 
     Args:
         technician_id: Optional filter — return only slots for this technician UUID.
-        day_of_week: Optional filter — return only slots for this day (0=Sunday, 6=Saturday).
+        day_of_week: Optional filter — return only slots for this day (1=Monday, 5=Friday).
         connection: Injected asyncpg database connection.
 
     Returns:

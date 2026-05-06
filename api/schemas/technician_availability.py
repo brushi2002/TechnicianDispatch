@@ -13,12 +13,12 @@ class TechnicianAvailabilityCreate(BaseModel):
 
     Attributes:
         technician_id: UUID of the owning Technician.
-        day_of_week: Integer 0 (Sunday) through 6 (Saturday).
+        day_of_week: Integer 1 (Monday) through 5 (Friday), weekdays only.
         start_time: Start of the availability window (time with timezone).
         end_time: End of the availability window (time with timezone).
     """
     technician_id: UUID = Field(..., alias="TechnicianID")
-    day_of_week: int = Field(..., ge=0, le=6, alias="DayofWeek")
+    day_of_week: int = Field(..., ge=1, le=5, alias="DayofWeek")
     start_time: Optional[time] = Field(None, alias="StartTime")
     end_time: Optional[time] = Field(None, alias="EndTime")
 
@@ -46,7 +46,7 @@ class TechnicianAvailabilityResponse(BaseModel):
 
     Attributes:
         technician_id: UUID of the owning Technician.
-        day_of_week: Day integer (0=Sunday, 6=Saturday).
+        day_of_week: Day integer (1=Monday, 5=Friday, weekdays only).
         start_time: Start of the availability window.
         end_time: End of the availability window.
     """

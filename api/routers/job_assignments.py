@@ -31,7 +31,7 @@ async def list_job_assignments(
     Returns:
         List of JobAssignmentResponse objects.
     """
-    base_query = 'SELECT "JobId", "TechnicianId", "JobStartTime", "JobEndDate" FROM public."JobAssignment"'
+    base_query = 'SELECT "JobId", "TechnicianId", "JobStartDateTime", "JobEndDateTime" FROM public."JobAssignment"'
     conditions: list[str] = []
     parameters: list = []
 
@@ -46,7 +46,7 @@ async def list_job_assignments(
     if conditions:
         base_query += " WHERE " + " AND ".join(conditions)
 
-    base_query += ' ORDER BY "JobStartTime"'
+    base_query += ' ORDER BY "JobStartDateTime"'
     records = await connection.fetch(base_query, *parameters)
     return [JobAssignmentResponse(**dict(record)) for record in records]
 
@@ -73,7 +73,7 @@ async def get_job_assignment(
     """
     record = await connection.fetchrow(
         """
-        SELECT "JobId", "TechnicianId", "JobStartTime", "JobEndDate"
+        SELECT "JobId", "TechnicianId", "JobStartDateTime", "JobEndDateTime"
         FROM public."JobAssignment"
         WHERE "JobId" = $1 AND "TechnicianId" = $2
         """,

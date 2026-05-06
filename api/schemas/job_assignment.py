@@ -7,7 +7,6 @@ from typing import Optional
 from datetime import datetime
 
 
-
 class AssignTechnicianPayload(BaseModel):
     """
     Payload for the dedicated POST /jobs/{job_id}/assign endpoint.
@@ -25,12 +24,12 @@ class JobAssignmentResponse(BaseModel):
     Attributes:
         job_id: UUID of the related Job.
         technician_id: UUID of the assigned Technician.
-        job_start_time: Scheduled start time.
-        job_end_date: Scheduled end time.
+        job_start_datetime: Scheduled start time (time with timezone).
+        job_end_date: Scheduled end time (time with timezone).
     """
     job_id: UUID = Field(alias="JobId")
     technician_id: UUID = Field(alias="TechnicianId")
-    job_start_time: Optional[datetime] = Field(None, alias="JobStartTime")
-    job_end_date: Optional[datetime] = Field(None, alias="JobEndDate")
+    job_start_datetime: Optional[datetime] = Field(None, alias="JobStartDateTime")
+    job_end_datetime: Optional[datetime] = Field(None, alias="JobEndDateTime")
 
     model_config = {"populate_by_name": True, "from_attributes": True}
