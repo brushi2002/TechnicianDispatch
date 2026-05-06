@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: techdispatchuser
+      POSTGRES_PASSWORD: TechDispatch2024
+      POSTGRES_DB: TechnicianDispatch
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/create_Technician.sql:/docker-entrypoint-initdb.d/01_create_Technician.sql
+      - ./db/create_Job.sql:/docker-entrypoint-initdb.d/02_create_Job.sql
+      - ./db/create_TechnicianAvailability.sql:/docker-entrypoint-initdb.d/03_create_TechnicianAvailability.sql
+      - ./db/create_JobAssignment.sql:/docker-entrypoint-initdb.d/04_create_JobAssignment.sql
+      - ./db/test_data.sql:/docker-entrypoint-initdb.d/05_test_data.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U techdispatchuser -d TechnicianDispatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://techdispatchuser:TechDispatch2024@db:5432/TechnicianDispatch
+    volumes:
+      - ./api:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./web
+    ports:
+      - "5173:5173"
+    environment:
+      API_TARGET: http://api:8000
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
