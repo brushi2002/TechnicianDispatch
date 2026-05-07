@@ -17,7 +17,7 @@ interface Props {
 
 export function AssignTechnicianDialog({ jobId, onClose }: Props) {
   const [technicianId, setTechnicianId] = useState('')
-  const { data: existing, isLoading: loadingExisting } = useAssignments(jobId ?? undefined)
+  const { data: existing, isLoading: loadingExisting } = useAssignments(jobId ?? undefined, undefined, !!jobId)
   const { data: technicians, isLoading: loadingTechnicians } = useAvailableTechnicians(jobId)
   const assign = useAssignTechnician()
 

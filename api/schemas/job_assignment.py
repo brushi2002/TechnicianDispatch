@@ -25,7 +25,7 @@ class JobAssignmentResponse(BaseModel):
         job_id: UUID of the related Job.
         technician_id: UUID of the assigned Technician.
         job_start_datetime: Scheduled start time (time with timezone).
-        job_end_date: Scheduled end time (time with timezone).
+        job_end_datetime: Scheduled end time (time with timezone).
     """
     job_id: UUID = Field(alias="JobId")
     technician_id: UUID = Field(alias="TechnicianId")

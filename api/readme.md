@@ -131,6 +131,8 @@ All routes are prefixed with `/api/v1`.
 | `POST` | `/jobs/{id}/assign` | Assign a technician to a job |
 | `GET` | `/jobs/{id}/assignments` | List all technician assignments for a job |
 
+`POST /jobs` and `PATCH /jobs/{id}` return `422 Unprocessable Entity` if `StartTime` falls on a weekend (Saturday or Sunday).
+
 ### Job Assignments
 
 | Method | Path | Description |
@@ -149,11 +151,13 @@ All routes are prefixed with `/api/v1`.
 | `PUT` | `/technician-availability/{technician_id}/{day_of_week}` | Update a slot's time window |
 | `DELETE` | `/technician-availability/{technician_id}/{day_of_week}` | Remove a slot |
 
+`POST` and `PUT` return `422 Unprocessable Entity` if `EndTime` is not greater than `StartTime`. `PUT` returns `400 Bad Request` if the request body contains no fields.
+
 ---
 
 ## Assigning a Technician to a Job
 
-`POST /api/v1/jobs/{job_id}/assign` is the only endpoint for creating assignments. It runs a series of validations before inserting:
+`POST /api/v1/jobs/{job_id}/assign` is the only endpoint for creating assignments. Each job may only have one technician assigned at a time (enforced by a `UNIQUE ("JobId")` constraint on `JobAssignment`). The endpoint runs a series of validations before inserting:
 
 1. Job exists
 2. Technician exists
@@ -181,9 +185,10 @@ All routes are prefixed with `/api/v1`.
 
 | Status | Cause |
 |--------|-------|
-| `400 Bad Request` | PATCH body contains no updatable fields |
+| `400 Bad Request` | PUT/PATCH body contains no updatable fields |
 | `404 Not Found` | Resource identified by path param does not exist |
 | `409 Conflict` | Duplicate assignment/availability, or FK constraint blocks a delete |
+| `422 Unprocessable Entity` | Field value fails validation (e.g. weekend `StartTime` on a job, `EndTime ≤ StartTime` on availability) |
 
 Cascade deletes are not defined in the database schema. To delete a `Technician` or `Job`, remove their related `JobAssignment` and `TechnicianAvailability` records first, or the API will return `409 Conflict`.
 

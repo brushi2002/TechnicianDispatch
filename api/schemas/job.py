@@ -1,8 +1,8 @@
 # Pydantic request/response models for the Job entity.
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from uuid import UUID
-from typing import Optional
+from typing import Optional, Self
 from datetime import datetime
 
 
@@ -13,13 +13,19 @@ class JobCreate(BaseModel):
     Attributes:
         name: Descriptive name for the job (max 50 characters).
         duration_in_hours: Estimated job duration; must be a positive integer.
-        start_time: Scheduled start time for the job.
+        start_time: Scheduled start time for the job; must fall on a weekday (Monday–Friday).
     """
     name: Optional[str] = Field(None, max_length=50, alias="Name")
     duration_in_hours: int = Field(..., gt=0, alias="DurationInHours")
     start_time: datetime = Field(..., alias="StartTime")
 
     model_config = {"populate_by_name": True}
+
+    @model_validator(mode="after")
+    def start_time_is_weekday(self) -> Self:
+        if self.start_time.weekday() >= 5:
+            raise ValueError("Job start time must be on a weekday (Monday–Friday).")
+        return self
 
 
 class JobUpdate(BaseModel):
@@ -30,13 +36,19 @@ class JobUpdate(BaseModel):
     Attributes:
         name: Updated job name.
         duration_in_hours: Updated duration in hours.
-        start_time: Updated scheduled start time.
+        start_time: Updated scheduled start time; must fall on a weekday (Monday–Friday) if provided.
     """
     name: Optional[str] = Field(None, max_length=50, alias="Name")
     duration_in_hours: Optional[int] = Field(None, gt=0, alias="DurationInHours")
     start_time: Optional[datetime] = Field(None, alias="StartTime")
 
     model_config = {"populate_by_name": True}
+
+    @model_validator(mode="after")
+    def start_time_is_weekday(self) -> Self:
+        if self.start_time is not None and self.start_time.weekday() >= 5:
+            raise ValueError("Job start time must be on a weekday (Monday–Friday).")
+        return self
 
 
 class JobResponse(BaseModel):

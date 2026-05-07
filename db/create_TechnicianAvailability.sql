@@ -9,5 +9,6 @@ CREATE TABLE IF NOT EXISTS public."TechnicianAvailability" (
 
     CONSTRAINT "TechnicianAvailability_pkey" PRIMARY KEY ("TechnicianID", "DayofWeek"),
     CONSTRAINT "chk_weekday" CHECK ("DayofWeek" BETWEEN 1 AND 5),
+    CONSTRAINT "chk_end_after_start" CHECK ("EndTime" > "StartTime"),
     CONSTRAINT "fk_techid" FOREIGN KEY ("TechnicianID") REFERENCES public."Technician"(id)
 );

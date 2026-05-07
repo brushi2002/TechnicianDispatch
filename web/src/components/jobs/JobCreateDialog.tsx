@@ -16,10 +16,17 @@ export function JobCreateDialog({ open, onClose }: Props) {
   const [name, setName] = useState('')
   const [duration, setDuration] = useState('')
   const [startTime, setStartTime] = useState('')
+  const [validationError, setValidationError] = useState<string | null>(null)
   const createJob = useCreateJob()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    const day = new Date(startTime).getDay()
+    if (day === 0 || day === 6) {
+      setValidationError('Job start time must be on a weekday (Monday–Friday).')
+      return
+    }
+    setValidationError(null)
     createJob.mutate(
       { name: name || undefined, duration_in_hours: Number(duration), start_time: new Date(startTime).toISOString() },
       {
@@ -41,9 +48,10 @@ export function JobCreateDialog({ open, onClose }: Props) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <ErrorAlert error={createJob.error} />
+          {validationError && <p className="text-sm text-destructive">{validationError}</p>}
           <div className="space-y-1">
             <Label htmlFor="job-name">Name</Label>
-            <Input id="job-name" value={name} onChange={e => setName(e.target.value)} placeholder="Optional" />
+            <Input id="job-name" value={name} onChange={e => setName(e.target.value)} placeholder="Optional" maxLength={50} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="job-duration">Duration (hours) *</Label>

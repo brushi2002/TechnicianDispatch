@@ -41,11 +41,11 @@ export function TechnicianCreateDialog({ open, onClose }: Props) {
           <ErrorAlert error={create.error} />
           <div className="space-y-1">
             <Label htmlFor="tech-name">Name *</Label>
-            <Input id="tech-name" required value={name} onChange={e => setName(e.target.value)} />
+            <Input id="tech-name" required value={name} onChange={e => setName(e.target.value)} maxLength={50} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="tech-address">Address</Label>
-            <Input id="tech-address" value={address} onChange={e => setAddress(e.target.value)} placeholder="Optional" />
+            <Input id="tech-address" value={address} onChange={e => setAddress(e.target.value)} placeholder="Optional" maxLength={200} />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

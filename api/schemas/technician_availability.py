@@ -1,9 +1,9 @@
 # Pydantic request/response models for the TechnicianAvailability entity.
 # This table has a composite PK of (TechnicianID, DayofWeek).
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from uuid import UUID
-from typing import Optional
+from typing import Optional, Self
 from datetime import time
 
 
@@ -24,6 +24,12 @@ class TechnicianAvailabilityCreate(BaseModel):
 
     model_config = {"populate_by_name": True}
 
+    @model_validator(mode="after")
+    def end_after_start(self) -> Self:
+        if self.start_time is not None and self.end_time is not None and self.end_time <= self.start_time:
+            raise ValueError("EndTime must be after StartTime.")
+        return self
+
 
 class TechnicianAvailabilityUpdate(BaseModel):
     """
@@ -38,6 +44,12 @@ class TechnicianAvailabilityUpdate(BaseModel):
     end_time: Optional[time] = Field(None, alias="EndTime")
 
     model_config = {"populate_by_name": True}
+
+    @model_validator(mode="after")
+    def end_after_start(self) -> Self:
+        if self.start_time is not None and self.end_time is not None and self.end_time <= self.start_time:
+            raise ValueError("EndTime must be after StartTime.")
+        return self
 
 
 class TechnicianAvailabilityResponse(BaseModel):

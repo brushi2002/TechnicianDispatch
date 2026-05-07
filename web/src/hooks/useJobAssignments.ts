@@ -21,10 +21,11 @@ const fetchAssignments = (jobId?: string, technicianId?: string) => {
 const deleteAssignment = ({ jobId, technicianId }: { jobId: string; technicianId: string }) =>
   apiClient.delete(`/job-assignments/${jobId}/${technicianId}`)
 
-export function useAssignments(jobId?: string, technicianId?: string) {
+export function useAssignments(jobId?: string, technicianId?: string, enabled = true) {
   return useQuery({
     queryKey: assignmentKeys.lists(jobId, technicianId),
     queryFn:  () => fetchAssignments(jobId, technicianId),
+    enabled,
   })
 }
 
@@ -33,6 +34,7 @@ export function useDeleteAssignment() {
   return useMutation({
     mutationFn: deleteAssignment,
     onSuccess: (_data, { jobId, technicianId }) => {
+      qc.invalidateQueries({ queryKey: assignmentKeys.lists(jobId) })
       qc.invalidateQueries({ queryKey: jobKeys.assignments(jobId) })
       qc.invalidateQueries({ queryKey: jobKeys.availableTechnicians(jobId) })
       qc.invalidateQueries({ queryKey: technicianKeys.assignments(technicianId) })

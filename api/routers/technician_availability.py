@@ -128,6 +128,11 @@ async def create_technician_availability(
             status_code=status.HTTP_409_CONFLICT,
             detail="An availability slot for this technician and day already exists.",
         )
+    except asyncpg.CheckViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="EndTime must be after StartTime.",
+        )
     return TechnicianAvailabilityResponse(**dict(record))
 
 
@@ -152,20 +157,32 @@ async def update_technician_availability(
         The updated TechnicianAvailabilityResponse.
 
     Raises:
+        HTTPException 400: If the payload contains no updatable fields.
         HTTPException 404: If no matching availability slot exists.
     """
-    record = await connection.fetchrow(
-        """
-        UPDATE public."TechnicianAvailability"
-        SET "StartTime" = $3, "EndTime" = $4
-        WHERE "TechnicianID" = $1 AND "DayofWeek" = $2
-        RETURNING *
-        """,
-        technician_id,
-        day_of_week,
-        payload.start_time,
-        payload.end_time,
-    )
+    if not payload.model_dump(exclude_unset=True):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields provided for update.",
+        )
+    try:
+        record = await connection.fetchrow(
+            """
+            UPDATE public."TechnicianAvailability"
+            SET "StartTime" = $3, "EndTime" = $4
+            WHERE "TechnicianID" = $1 AND "DayofWeek" = $2
+            RETURNING *
+            """,
+            technician_id,
+            day_of_week,
+            payload.start_time,
+            payload.end_time,
+        )
+    except asyncpg.CheckViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="EndTime must be after StartTime.",
+        )
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Availability slot not found.")
     return TechnicianAvailabilityResponse(**dict(record))

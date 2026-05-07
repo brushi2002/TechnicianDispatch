@@ -64,6 +64,8 @@ Stores a technician's recurring weekly availability. Each row represents a singl
 
 **Constraints:**
 - `TechnicianAvailability_pkey` — composite primary key on (`TechnicianID`, `DayofWeek`)
+- `chk_weekday` — `DayofWeek` must be between 1 and 5
+- `chk_end_after_start` — `EndTime` must be greater than `StartTime` (passes when either is NULL)
 - `fk_techid` — foreign key to `Technician(id)`
 
 ---
