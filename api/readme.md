@@ -96,10 +96,10 @@ Technician ──< TechnicianAvailability
 |-------|-------------|-----------------|
 | `Technician` | `id` UUID | `Name`, `Address` |
 | `Job` | `id` UUID | `Name`, `DurationInHours`, `StartTime` (TIMESTAMPTZ) |
-| `JobAssignment` | `(JobId, TechnicianId)` composite | `JobStartTime`, `JobEndDate` |
+| `JobAssignment` | `(JobId, TechnicianId)` composite | `JobStartDateTime`, `JobEndDateTime` |
 | `TechnicianAvailability` | `(TechnicianID, DayofWeek)` composite | `StartTime`, `EndTime` (TIMETZ) |
 
-`TechnicianAvailability.DayofWeek` is an integer: `0` = Sunday, `6` = Saturday.
+`TechnicianAvailability.DayofWeek` is an integer: `1` = Monday, `5` = Friday (weekdays only).
 
 ---
 
@@ -168,7 +168,7 @@ All routes are prefixed with `/api/v1`.
 }
 ```
 
-`JobStartTime` and `JobEndDate` are derived from `Job.StartTime` and `Job.DurationInHours` on insert.
+`JobStartDateTime` and `JobEndDateTime` are derived from `Job.StartTime` and `Job.DurationInHours` on insert.
 
 **Responses:**
 - `201 Created` — assignment created successfully

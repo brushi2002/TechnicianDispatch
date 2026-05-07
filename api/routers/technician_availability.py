@@ -64,7 +64,7 @@ async def get_technician_availability_slot(
 
     Args:
         technician_id: UUID of the technician.
-        day_of_week: Day integer (0=Sunday through 6=Saturday).
+        day_of_week: Day integer (1=Monday through 5=Friday, weekdays only).
         connection: Injected asyncpg database connection.
 
     Returns:
@@ -144,7 +144,7 @@ async def update_technician_availability(
 
     Args:
         technician_id: UUID of the technician.
-        day_of_week: Day integer (0=Sunday through 6=Saturday).
+        day_of_week: Day integer (1=Monday through 5=Friday, weekdays only).
         payload: TechnicianAvailabilityUpdate body with optional StartTime and EndTime.
         connection: Injected asyncpg database connection.
 
@@ -182,7 +182,7 @@ async def delete_technician_availability(
 
     Args:
         technician_id: UUID of the technician.
-        day_of_week: Day integer (0=Sunday through 6=Saturday).
+        day_of_week: Day integer (1=Monday through 5=Friday, weekdays only).
         connection: Injected asyncpg database connection.
 
     Raises:

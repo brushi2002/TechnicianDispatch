@@ -41,8 +41,8 @@ Junction table that records the assignment of a technician to a job. The composi
 |---------------|-------------|----------|----------------------------------------|
 | JobId         | UUID        | NO       | PK + FK → Job.id                       |
 | TechnicianId  | UUID        | NO       | PK + FK → Technician.id               |
-| JobStartTime  | TIMESTAMPTZ | YES      | Resolved start time for this assignment |
-| JobEndDate    | TIMESTAMPTZ | YES      | Resolved end time for this assignment   |
+| JobStartDateTime | TIMESTAMPTZ | YES      | Resolved start datetime for this assignment |
+| JobEndDateTime   | TIMESTAMPTZ | YES      | Resolved end datetime for this assignment   |
 
 **Constraints:**
 - `JobAssignment_pkey` — composite primary key on (`JobId`, `TechnicianId`)
@@ -58,7 +58,7 @@ Stores a technician's recurring weekly availability. Each row represents a singl
 | Column       | Type    | Nullable | Notes                              |
 |--------------|---------|----------|------------------------------------|
 | TechnicianID | UUID    | NO       | PK + FK → Technician.id            |
-| DayofWeek    | INTEGER | NO       | PK — 0 = Sunday … 6 = Saturday    |
+| DayofWeek    | INTEGER | NO       | PK — 1 = Monday … 5 = Friday (weekdays only) |
 | StartTime    | TIMETZ  | YES      | Start of availability window       |
 | EndTime      | TIMETZ  | YES      | End of availability window         |
 
