@@ -169,7 +169,8 @@ async def update_technician_availability(
         record = await connection.fetchrow(
             """
             UPDATE public."TechnicianAvailability"
-            SET "StartTime" = $3, "EndTime" = $4
+            SET "StartTime" = COALESCE($3, "StartTime"),
+                "EndTime"   = COALESCE($4, "EndTime")
             WHERE "TechnicianID" = $1 AND "DayofWeek" = $2
             RETURNING *
             """,
